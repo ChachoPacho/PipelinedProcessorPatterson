@@ -20,7 +20,7 @@ module maindec (input logic [10:0] Op,
 				// CBZ Format
 				11'b101_1010_0???: bus <= 9'b1x00_010_01;
 				// LDUR Format
-				11'b111_1100_0010: bus <= 9'bx111_101_00;
+				11'b111_1100_0010: bus <= 9'bx111_001_00;
 				// STUR Format
 				11'b111_1100_0000: bus <= 9'b1x00_101_00;
 				// Set Default
