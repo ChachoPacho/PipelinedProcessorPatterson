@@ -6,7 +6,7 @@ module imem #(parameter N = 32)
 	
 	initial
 		begin 
-			ROM[0:87] = '{32'hf8000001, 32'hf8008002, 32'hf8000203,
+			ROM[0:99] = '{32'hf8000001, 32'hf8008002, 32'hf8000203,
 									 32'h8b050083, 32'h8b1f03ff, 32'h8b1f03ff, 
 									 32'hf8018003, 32'hcb050083, 32'h8b1f03ff,
 									 32'h8b1f03ff, 32'hf8020003, 32'hcb0a03e4, 
@@ -35,6 +35,12 @@ module imem #(parameter N = 32)
 									 32'hf85f83d9, 32'h8b1e03de, 32'h8b1f03ff,
 									 32'h8b1f03ff, 32'h8b1003de, 32'h8b1f03ff,
 									 32'h8b1f03ff, 32'hf81f83d9, 
+									 
+									 32'hd2e0003d, 32'h8b1f03ff, 32'h8b1f03ff,  
+									 32'hf80a001d, 32'hd28002fc, 32'h8b1f03ff,  
+									 32'h8b1f03ff, 32'hf80a801c, 32'hd2a1fffd,
+									 32'h8b1f03ff, 32'h8b1f03ff, 32'hf80b001d,
+									 
 									 32'hb400001f};
 		end
 		

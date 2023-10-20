@@ -24,6 +24,7 @@ module maindec (input logic [10:0] Op,
 				// STUR Format
 				11'b111_1100_0000: bus <= 9'b1x00_101_00;
 				// Set Default
+				11'b11?_1001_01??: bus <= 9'b1010_001_01;
 				default: bus <= 9'b0;
 			endcase
 	end
