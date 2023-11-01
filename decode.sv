@@ -5,9 +5,10 @@ module decode #(parameter N = 64)
 					input logic [N-1:0] writeData3_D,
 					input logic [31:0] instr_D,
 					output logic [N-1:0] signImm_D, readData1_D, readData2_D, 
+					output logic [4:0] ra1, ra2,
 					input logic [4:0] wa3_D); // Eliminar para single cycle processor
 					
-	logic [4:0] ra2;			
+	assign ra1 = instr_D[9:5];
 	
 	mux2 	#(5) 	ra2mux	(.d0(instr_D[20:16]), .d1(instr_D[4:0]), .s(reg2loc_D), .y(ra2));
 	

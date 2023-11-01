@@ -20,7 +20,7 @@ module datapath #(parameter N = 64)
 	logic [N-1:0] signImm_D, readData1_D, readData2_D;
 	logic zero_E;
 	logic [95:0] qIF_ID;
-	logic [270:0] qID_EX;
+	logic [280:0] qID_EX;
 	logic [202:0] qEX_MEM;
 	logic [134:0] qMEM_WB;
 	
@@ -36,6 +36,9 @@ module datapath #(parameter N = 64)
 										.d({IM_addr, IM_readData}),
 										.q(qIF_ID));
 										
+										
+	logic [4:0] ra1_DECODE, ra2_DECODE;
+										
 	
 	decode 	#(64) 	DECODE 	(.regWrite_D(qMEM_WB[134]),
 										.reg2loc_D(reg2loc), 
@@ -45,33 +48,61 @@ module datapath #(parameter N = 64)
 										.signImm_D(signImm_D), 
 										.readData1_D(readData1_D),
 										.readData2_D(readData2_D),
+										.ra1(ra1_DECODE),
+										.ra2(ra2_DECODE),
 										.wa3_D(qMEM_WB[4:0]));				
 																									
 									
-	flopr 	#(271)	ID_EX 	(.clk(clk),
+	flopr 	#(281)	ID_EX 	(.clk(clk),
 										.reset(reset), 
-										.d({AluSrc, AluControl, Branch, memRead, memWrite, regWrite, memtoReg,	
-											qIF_ID[95:32], signImm_D, readData1_D, readData2_D, qIF_ID[4:0]}),
+										.d({/*rm:280-276*/ra2_DECODE, /*rn:275-271*/ra1_DECODE,
+											/*270*/AluSrc, /*269-266*/AluControl, /*265*/Branch, 
+											/*264*/memRead, /*263*/memWrite, /*262*/regWrite, /*261*/memtoReg,	
+											/*260-197*/qIF_ID[95:32], /*196-133*/signImm_D, /*132-69*/readData1_D, 
+											/*68-5*/readData2_D, /*4-0*/qIF_ID[4:0]}),
 										.q(qID_EX));	
-	
+
+										
+	logic [N-1:0] readData1_E, readData2_E;
+	logic [1:0] rnS_FUNIT, rmS_FUNIT;
+										
+	forwardingUnit 	F_UNIT 	(.exR(qEX_MEM[4:0]), 
+										.wbR(qMEM_WB[4:0]), 
+										.rn(qID_EX[275:271]), 
+										.rm(qID_EX[280:276]),
+										.exS(qEX_MEM[199]), 
+										.wbS(qMEM_WB[134]),
+										.rnY(rnS_FUNIT), 
+										.rmY(rmS_FUNIT));
+
+
+	forwardingMux #(N)	F_MUX	(.rnSRC(rnS_FUNIT), 
+										.rmSRC(rmS_FUNIT),
+										.exR(qEX_MEM[132:69]), 
+										.wbR(writeData3), 
+										.rnD(qID_EX[132:69]), 
+										.rmD(qID_EX[68:5]), 
+										.rnY(readData1_E), 
+										.rmY(readData2_E));
+										
 										
 	execute 	#(64) 	EXECUTE 	(.AluSrc(qID_EX[270]),
 										.AluControl(qID_EX[269:266]),
 										.PC_E(qID_EX[260:197]), 
 										.signImm_E(qID_EX[196:133]), 
-										.readData1_E(qID_EX[132:69]), 
-										.readData2_E(qID_EX[68:5]), 
+										.readData1_E(readData1_E), 
+										.readData2_E(readData2_E), 
 										.PCBranch_E(PCBranch_E), 
 										.aluResult_E(aluResult_E), 
 										.writeData_E(writeData_E), 
 										.zero_E(zero_E));											
-											
+										
 									
 	flopr 	#(203)	EX_MEM 	(.clk(clk),
 										.reset(reset), 
-										.d({qID_EX[265:261], PCBranch_E, zero_E, aluResult_E, writeData_E, qID_EX[4:0]}),
-										.q(qEX_MEM));	
-	
+										.d({/*202-198*/qID_EX[265:261], PCBranch_E, zero_E, aluResult_E, writeData_E, qID_EX[4:0]}),
+										.q(qEX_MEM));
+											
 										
 	memory				MEMORY	(.Branch_M(qEX_MEM[202]), 
 										.zero_M(qEX_MEM[133]), 
@@ -88,7 +119,7 @@ module datapath #(parameter N = 64)
 	
 	flopr 	#(135)	MEM_WB 	(.clk(clk),
 										.reset(reset), 
-										.d({qEX_MEM[199:198], qEX_MEM[132:69],	DM_readData, qEX_MEM[4:0]}),
+										.d({/*134-133*/qEX_MEM[199:198], qEX_MEM[132:69],	DM_readData, qEX_MEM[4:0]}),
 										.q(qMEM_WB));
 		
 	
