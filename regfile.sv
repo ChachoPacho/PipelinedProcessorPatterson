@@ -11,8 +11,8 @@ module regfile (input logic clk, we3,
 
 	always_comb
 		begin
-		rd1 <= (ra1 == wa3 & wa3 !== 5'd31) ? wd3 : memory[ra1];
-		rd2 <= (ra2 == wa3 & wa3 !== 5'd31) ? wd3 : memory[ra2];
+		rd1 <= (ra1 == wa3 & wa3 !== 5'd31 & we3) ? wd3 : memory[ra1];
+		rd2 <= (ra2 == wa3 & wa3 !== 5'd31 & we3) ? wd3 : memory[ra2];
 	end
 	
 	always_ff @(posedge clk)
