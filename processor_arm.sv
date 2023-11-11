@@ -11,6 +11,7 @@ module processor_arm #(parameter N = 64)
 	logic reg2loc, regWrite, AluSrc, Branch, memtoReg, memRead, memWrite;
 	logic [N-1:0] DM_readData, IM_address;  //DM_addr, DM_writeData
 	logic DM_readEnable; //DM_writeEnable
+	logic DWrite_HDU;		// Stall
 	logic [10:0] instr;
 	
 	controller 		c 			(.instr(instr), 
@@ -40,7 +41,8 @@ module processor_arm #(parameter N = 64)
 									.DM_addr(DM_addr), 
 									.DM_writeData(DM_writeData), 
 									.DM_writeEnable(DM_writeEnable), 
-									.DM_readEnable(DM_readEnable));				
+									.DM_readEnable(DM_readEnable),
+									.DWrite_HDU(DWrite_HDU));				
 					
 					
 	imem 				instrMem (.addr(IM_address[8:2]),
@@ -56,8 +58,9 @@ module processor_arm #(parameter N = 64)
 									.dump(dump)); 							
 		 
 							
-	flopr #(11)		IF_ID_TOP(.clk(CLOCK_50),
+	flopre #(11)		IF_ID_TOP(.clk(CLOCK_50),
 									.reset(reset), 
+									.enable(DWrite_HDU),
 									.d(q[31:21]), 
 									.q(instr));
  	

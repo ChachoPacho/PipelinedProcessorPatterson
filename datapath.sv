@@ -13,7 +13,7 @@ module datapath #(parameter N = 64)
 					input logic [31:0] IM_readData,
 					input logic [N-1:0] DM_readData,
 					output logic [N-1:0] IM_addr, DM_addr, DM_writeData,
-					output logic DM_writeEnable, DM_readEnable );					
+					output logic DM_writeEnable, DM_readEnable, DWrite_HDU);					
 					
 	logic PCSrc;
 	logic [N-1:0] PCBranch_E, aluResult_E, writeData_E, writeData3; 
@@ -24,22 +24,34 @@ module datapath #(parameter N = 64)
 	logic [202:0] qEX_MEM;
 	logic [134:0] qMEM_WB;
 	
+	// Hazard Detection Unit Vars
+	logic controlSRC_HDU, PCWrite_HDU;
+	
 	fetch 	#(64) 	FETCH 	(.PCSrc_F(PCSrc),
 										.clk(clk),
 										.reset(reset),
+										.enable(PCWrite_HDU),
 										.PCBranch_F(qEX_MEM[197:134]),
 										.imem_addr_F(IM_addr));
 					
 	
-	flopr 	#(96)		IF_ID 	(.clk(clk),
-										.reset(reset), 
+	flopre 	#(96)		IF_ID 	(.clk(clk),
+										.reset(reset),
+										.enable(DWrite_HDU),
 										.d({IM_addr, IM_readData}),
 										.q(qIF_ID));
 										
 										
 	logic [4:0] ra1_DECODE, ra2_DECODE;
-										
-	
+
+	hazardDetectionUnit HD_UNIT (.rd(qID_EX[4:0]),
+											.intr(qIF_ID[31:0]),
+											.MemRead(qID_EX[264]),
+											.controlSrc(controlSRC_HDU), 
+											.DWrite(DWrite_HDU), 
+											.PCWrite(PCWrite_HDU));
+
+
 	decode 	#(64) 	DECODE 	(.regWrite_D(qMEM_WB[134]),
 										.reg2loc_D(reg2loc), 
 										.clk(clk),
@@ -50,22 +62,29 @@ module datapath #(parameter N = 64)
 										.readData2_D(readData2_D),
 										.ra1(ra1_DECODE),
 										.ra2(ra2_DECODE),
-										.wa3_D(qMEM_WB[4:0]));				
-																									
+										.wa3_D(qMEM_WB[4:0]));	
+							
+				
+	logic [9:0] DECODE_E_M;
+
+	mux2 #(10) DECODE_FLOP (.d0({
+											/*9*/AluSrc, /*8-5*/AluControl, 
+											/*4*/Branch, /*3*/memRead, /*2*/memWrite, /*1*/regWrite, /*0*/memtoReg
+										}), 
+									.d1(5'b0),
+									.s(controlSRC_HDU),
+									.y(DECODE_E_M));
 									
 	flopr 	#(281)	ID_EX 	(.clk(clk),
 										.reset(reset), 
-										.d({/*rm:280-276*/ra2_DECODE, /*rn:275-271*/ra1_DECODE,
-											/*270*/AluSrc, /*269-266*/AluControl, /*265*/Branch, 
-											/*264*/memRead, /*263*/memWrite, /*262*/regWrite, /*261*/memtoReg,	
+										.d({/*rm:280-276*/ra2_DECODE, /*rn:275-271*/ra1_DECODE, /*270-261*/DECODE_E_M,
 											/*260-197*/qIF_ID[95:32], /*196-133*/signImm_D, /*132-69*/readData1_D, 
 											/*68-5*/readData2_D, /*4-0*/qIF_ID[4:0]}),
-										.q(qID_EX));	
+										.q(qID_EX));
 
-										
 	logic [N-1:0] readData1_E, readData2_E;
 	logic [1:0] rnS_FUNIT, rmS_FUNIT;
-										
+
 	forwardingUnit 	F_UNIT 	(.exR(qEX_MEM[4:0]), 
 										.wbR(qMEM_WB[4:0]), 
 										.rn(qID_EX[275:271]), 
@@ -84,8 +103,8 @@ module datapath #(parameter N = 64)
 										.rmD(qID_EX[68:5]), 
 										.rnY(readData1_E), 
 										.rmY(readData2_E));
-										
-										
+
+
 	execute 	#(64) 	EXECUTE 	(.AluSrc(qID_EX[270]),
 										.AluControl(qID_EX[269:266]),
 										.PC_E(qID_EX[260:197]), 
