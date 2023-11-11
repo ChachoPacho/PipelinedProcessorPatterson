@@ -3,7 +3,7 @@ module maindec (input logic [10:0] Op,
 					RegWrite, MemRead, MemWrite, Branch, ALUSrc,
 					output logic [1:0] ALUOp);
 	
-	logic [8:0] bus = 12'b0;
+	logic [8:0] bus = 9'b0;
 	assign {/* 1 */
 				Reg2Loc, MemtoReg, RegWrite, MemRead, MemWrite, Branch, ALUSrc, // 7
 				/* 2 */
