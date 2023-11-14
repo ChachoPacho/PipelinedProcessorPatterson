@@ -12,6 +12,7 @@ module processor_arm #(parameter N = 64)
 	logic [N-1:0] DM_readData, IM_address;  //DM_addr, DM_writeData
 	logic DM_readEnable; //DM_writeEnable
 	logic DWrite_HDU;		// Stall
+	logic controlHazard;
 	logic [10:0] instr;
 	
 	controller 		c 			(.instr(instr), 
@@ -42,10 +43,12 @@ module processor_arm #(parameter N = 64)
 									.DM_writeData(DM_writeData), 
 									.DM_writeEnable(DM_writeEnable), 
 									.DM_readEnable(DM_readEnable),
-									.DWrite_HDU(DWrite_HDU));				
+									.DWrite_HDU(DWrite_HDU),
+									.controlHazard(controlHazard));				
 					
 					
 	imem 				instrMem (.addr(IM_address[8:2]),
+									 .enable(~controlHazard),
 									.q(q));
 									
 	
@@ -58,10 +61,16 @@ module processor_arm #(parameter N = 64)
 									.dump(dump)); 							
 		 
 							
+	logic [10:0] dIF_ID;
+	mux2 #(11) IF_FLOP (.d0(q[31:21]), 
+								.d1(11'b0),
+								.s(controlHazard),
+								.y(dIF_ID));
+							
 	flopre #(11)		IF_ID_TOP(.clk(CLOCK_50),
 									.reset(reset), 
 									.enable(DWrite_HDU),
-									.d(q[31:21]), 
+									.d(dIF_ID), 
 									.q(instr));
  	
 endmodule

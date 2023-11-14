@@ -13,7 +13,7 @@ module datapath #(parameter N = 64)
 					input logic [31:0] IM_readData,
 					input logic [N-1:0] DM_readData,
 					output logic [N-1:0] IM_addr, DM_addr, DM_writeData,
-					output logic DM_writeEnable, DM_readEnable, DWrite_HDU);					
+					output logic DM_writeEnable, DM_readEnable, DWrite_HDU, controlHazard);					
 					
 	logic PCSrc;
 	logic [N-1:0] PCBranch_E, aluResult_E, writeData_E, writeData3; 
@@ -33,12 +33,17 @@ module datapath #(parameter N = 64)
 										.enable(PCWrite_HDU),
 										.PCBranch_F(qEX_MEM[197:134]),
 										.imem_addr_F(IM_addr));
-					
+	
+	logic [95:0] dIF_ID;
+	mux2 #(96) IF_FLOP (.d0({IM_addr, IM_readData}), 
+								.d1(96'b0),
+								.s(PCSrc),
+								.y(dIF_ID));
 	
 	flopre 	#(96)		IF_ID 	(.clk(clk),
 										.reset(reset),
 										.enable(DWrite_HDU),
-										.d({IM_addr, IM_readData}),
+										.d(dIF_ID),
 										.q(qIF_ID));
 										
 										
@@ -71,15 +76,21 @@ module datapath #(parameter N = 64)
 											/*9*/AluSrc, /*8-5*/AluControl, 
 											/*4*/Branch, /*3*/memRead, /*2*/memWrite, /*1*/regWrite, /*0*/memtoReg
 										}), 
-									.d1(5'b0),
+									.d1(10'b0),
 									.s(controlSRC_HDU),
 									.y(DECODE_E_M));
+					
+	logic [280:0] dID_EX;
+	mux2 #(281) ID_FLOP (.d0({/*rm:280-276*/ra2_DECODE, /*rn:275-271*/ra1_DECODE, /*270-261*/DECODE_E_M,
+											/*260-197*/qIF_ID[95:32], /*196-133*/signImm_D, /*132-69*/readData1_D, 
+											/*68-5*/readData2_D, /*4-0*/qIF_ID[4:0]}), 
+								.d1(281'b0),
+								.s(PCSrc),
+								.y(dID_EX));
 									
 	flopr 	#(281)	ID_EX 	(.clk(clk),
 										.reset(reset), 
-										.d({/*rm:280-276*/ra2_DECODE, /*rn:275-271*/ra1_DECODE, /*270-261*/DECODE_E_M,
-											/*260-197*/qIF_ID[95:32], /*196-133*/signImm_D, /*132-69*/readData1_D, 
-											/*68-5*/readData2_D, /*4-0*/qIF_ID[4:0]}),
+										.d(dID_EX),
 										.q(qID_EX));
 
 	logic [N-1:0] readData1_E, readData2_E;
@@ -115,18 +126,24 @@ module datapath #(parameter N = 64)
 										.aluResult_E(aluResult_E), 
 										.writeData_E(writeData_E), 
 										.zero_E(zero_E));											
-										
+	
+	logic [202:0] dEX_MEM;
+	mux2 #(203) EX_FLOP (.d0({/*202-198*/qID_EX[265:261], PCBranch_E, zero_E, aluResult_E, writeData_E, qID_EX[4:0]}), 
+								.d1(203'b0),
+								.s(PCSrc),
+								.y(dEX_MEM));
 									
 	flopr 	#(203)	EX_MEM 	(.clk(clk),
 										.reset(reset), 
-										.d({/*202-198*/qID_EX[265:261], PCBranch_E, zero_E, aluResult_E, writeData_E, qID_EX[4:0]}),
+										.d(dEX_MEM),
 										.q(qEX_MEM));
 											
 										
 	memory				MEMORY	(.Branch_M(qEX_MEM[202]), 
 										.zero_M(qEX_MEM[133]), 
 										.PCSrc_M(PCSrc));
-			
+										
+	assign controlHazard = PCSrc;
 	
 	// Salida de señales a Data Memory
 	assign DM_writeData = qEX_MEM[68:5];
